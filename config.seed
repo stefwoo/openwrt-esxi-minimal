@@ -1,0 +1,153 @@
+# Target System
+CONFIG_TARGET_x86=y
+CONFIG_TARGET_x86_64=y
+CONFIG_TARGET_x86_64_DEVICE_generic=y
+
+# Image Options
+CONFIG_TARGET_KERNEL_PARTSIZE=32
+CONFIG_TARGET_ROOTFS_PARTSIZE=256
+CONFIG_TARGET_ROOTFS_TARGZ=y
+CONFIG_TARGET_ROOTFS_EXT4FS=y
+CONFIG_TARGET_ROOTFS_SQUASHFS=y
+CONFIG_VMDK_IMAGES=y
+
+# Disable IPv6 completely
+CONFIG_IPV6=n
+
+# Basic System - Minimal
+CONFIG_PACKAGE_base-files=y
+CONFIG_PACKAGE_busybox=y
+CONFIG_PACKAGE_dnsmasq=n
+CONFIG_PACKAGE_dropbear=y
+CONFIG_PACKAGE_firewall4=y
+CONFIG_PACKAGE_libc=y
+CONFIG_PACKAGE_libgcc=y
+CONFIG_PACKAGE_libustream-wolfssl=y
+CONFIG_PACKAGE_libwolfssl=y
+CONFIG_PACKAGE_logd=y
+CONFIG_PACKAGE_mtd=y
+CONFIG_PACKAGE_netifd=y
+CONFIG_PACKAGE_opkg=y
+CONFIG_PACKAGE_procd=y
+CONFIG_PACKAGE_procd-seccomp=y
+CONFIG_PACKAGE_procd-ujail=y
+CONFIG_PACKAGE_rpcd=y
+CONFIG_PACKAGE_rpcd-mod-file=y
+CONFIG_PACKAGE_rpcd-mod-iwinfo=y
+CONFIG_PACKAGE_rpcd-mod-rpcsys=y
+CONFIG_PACKAGE_ucode=y
+CONFIG_PACKAGE_ucode-mod-fs=y
+CONFIG_PACKAGE_ucode-mod-ubus=y
+CONFIG_PACKAGE_ucode-mod-uci=y
+CONFIG_PACKAGE_urandom-seed=y
+CONFIG_PACKAGE_urngd=y
+CONFIG_PACKAGE_usign=y
+
+# LuCI Web Interface - Minimal + Chinese
+CONFIG_PACKAGE_luci=y
+CONFIG_PACKAGE_luci-base=y
+CONFIG_PACKAGE_luci-mod-admin-full=y
+CONFIG_PACKAGE_luci-theme-bootstrap=y
+CONFIG_PACKAGE_luci-app-firewall=y
+CONFIG_PACKAGE_luci-mod-network=y
+CONFIG_PACKAGE_luci-mod-status=y
+CONFIG_PACKAGE_luci-mod-system=y
+CONFIG_LUCI_LANG_zh_CN=y
+CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+
+# Web SSH - ttyd with Chinese
+CONFIG_PACKAGE_ttyd=y
+CONFIG_PACKAGE_luci-app-ttyd=y
+CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y
+
+# Network Tools for subscription
+CONFIG_PACKAGE_curl=y
+CONFIG_PACKAGE_wget-ssl=y
+CONFIG_PACKAGE_ca-bundle=y
+CONFIG_PACKAGE_ca-certificates=y
+CONFIG_PACKAGE_jq=y
+
+# Momo packages with Chinese
+CONFIG_PACKAGE_luci-app-momo=y
+CONFIG_PACKAGE_luci-i18n-momo-zh-cn=y
+CONFIG_PACKAGE_momo=y
+
+# Chinese Language Support
+CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
+
+# Sing-box core - will be installed via feed
+CONFIG_PACKAGE_sing-box=y
+
+# Essential Kernel Modules for momo/sing-box
+CONFIG_PACKAGE_kmod-tun=y
+CONFIG_PACKAGE_kmod-inet-diag=y
+CONFIG_PACKAGE_kmod-nft-socket=y
+CONFIG_PACKAGE_kmod-nft-tproxy=y
+CONFIG_PACKAGE_kmod-nf-conntrack=y
+CONFIG_PACKAGE_kmod-nf-conntrack-netlink=y
+CONFIG_PACKAGE_kmod-nf-ipt=y
+CONFIG_PACKAGE_kmod-nf-nat=y
+CONFIG_PACKAGE_kmod-nf-reject=y
+CONFIG_PACKAGE_kmod-nfnetlink=y
+CONFIG_PACKAGE_kmod-ipt-core=y
+CONFIG_PACKAGE_kmod-ipt-conntrack=y
+CONFIG_PACKAGE_kmod-ipt-nat=y
+CONFIG_PACKAGE_kmod-ipt-tproxy=y
+
+# Network Support - ESXi optimized
+CONFIG_PACKAGE_kmod-e1000=y
+CONFIG_PACKAGE_kmod-e1000e=y
+CONFIG_PACKAGE_kmod-igb=y
+CONFIG_PACKAGE_kmod-ixgbe=y
+CONFIG_PACKAGE_kmod-pcnet32=y
+CONFIG_PACKAGE_kmod-vmxnet3=y
+
+# Remove PPP completely
+CONFIG_PACKAGE_kmod-ppp=n
+CONFIG_PACKAGE_kmod-pppoe=n
+CONFIG_PACKAGE_kmod-pppox=n
+CONFIG_PACKAGE_ppp=n
+CONFIG_PACKAGE_ppp-mod-pppoe=n
+CONFIG_PACKAGE_luci-proto-ppp=n
+
+# Remove IPv6
+CONFIG_PACKAGE_odhcpd=n
+CONFIG_PACKAGE_odhcp6c=n
+CONFIG_PACKAGE_ipv6helper=n
+CONFIG_PACKAGE_kmod-ip6tables=n
+CONFIG_PACKAGE_kmod-ipt-nat6=n
+CONFIG_PACKAGE_kmod-ipt-raw6=n
+CONFIG_PACKAGE_kmod-nf-nat6=n
+CONFIG_PACKAGE_kmod-nf-reject6=n
+
+# Remove unnecessary services
+CONFIG_PACKAGE_dnsmasq=n
+CONFIG_PACKAGE_hostapd=n
+CONFIG_PACKAGE_wpad=n
+CONFIG_PACKAGE_wpa-supplicant=n
+CONFIG_PACKAGE_ppp-mod-pppoe=n
+CONFIG_PACKAGE_kmod-usb-core=n
+CONFIG_PACKAGE_kmod-usb-net=n
+CONFIG_PACKAGE_kmod-usb-net-cdc-ether=n
+CONFIG_PACKAGE_kmod-usb-net-rndis=n
+CONFIG_PACKAGE_kmod-usb3=n
+
+# Remove other unnecessary packages
+CONFIG_PACKAGE_kmod-ipt-offload=n
+CONFIG_PACKAGE_kmod-nft-offload=n
+CONFIG_PACKAGE_kmod-ipt-nathelper-rtsp=n
+CONFIG_PACKAGE_kmod-nf-nathelper-h323=n
+CONFIG_PACKAGE_kmod-nf-nathelper-extra=n
+CONFIG_PACKAGE_kmod-nft-arp=n
+CONFIG_PACKAGE_kmod-nft-counter=n
+CONFIG_PACKAGE_kmod-nft-hash=n
+CONFIG_PACKAGE_kmod-nft-log=n
+CONFIG_PACKAGE_kmod-nft-netdev=n
+CONFIG_PACKAGE_kmod-nft-numgen=n
+CONFIG_PACKAGE_kmod-nft-osf=n
+CONFIG_PACKAGE_kmod-nft-queue=n
+CONFIG_PACKAGE_kmod-nft-rbtree=n
+CONFIG_PACKAGE_kmod-nft-redir=n
+CONFIG_PACKAGE_kmod-nft-reject=n
+CONFIG_PACKAGE_kmod-nft-set=n
+CONFIG_PACKAGE_kmod-nft-xfrm=n
