@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# 设置中文
+uci set luci.main.lang='zh_cn'
+uci commit luci
+
+# 配置ttyd
+uci set ttyd.@ttyd[0]=ttyd
+uci set ttyd.@ttyd[0].interface='@lan'
+uci set ttyd.@ttyd[0].port='7681'
+uci set ttyd.@ttyd[0].command='/bin/login'
+uci commit ttyd
+
+# 启用ttyd
+/etc/init.d/ttyd enable
+
+exit 0
