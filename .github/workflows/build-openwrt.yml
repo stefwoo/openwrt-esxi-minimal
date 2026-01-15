@@ -6,7 +6,7 @@ on:
       openwrt_version:
         description: 'OpenWrt version tag'
         required: true
-        default: 'v24.10.5'
+        default: 'v24.10.0'
 
 jobs:
   build:
@@ -34,8 +34,6 @@ jobs:
     - name: Clone OpenWrt
       run: |
         OPENWRT_VER="${{ github.event.inputs.openwrt_version }}"
-        
-        # 尝试多个源克隆OpenWrt
         echo "=== 尝试从 GitHub 镜像克隆 ==="
         if git clone --depth 1 --branch "$OPENWRT_VER" https://github.com/openwrt/openwrt.git openwrt; then
           echo "GitHub 镜像克隆成功"
@@ -53,9 +51,6 @@ jobs:
             fi
           fi
         fi
-        
-        cd openwrt
-        echo "OpenWrt 版本: $(git describe --tags 2>/dev/null || echo $OPENWRT_VER)"
       
     - name: Update and Install Feeds
       run: |
@@ -66,9 +61,7 @@ jobs:
     - name: Copy Configuration Files
       run: |
         cd openwrt
-        # 复制config
         cp $GITHUB_WORKSPACE/config.seed .config
-        # 复制网络配置脚本
         mkdir -p files/etc/uci-defaults
         cp $GITHUB_WORKSPACE/files/99-custom-network files/etc/uci-defaults/
         cp $GITHUB_WORKSPACE/files/99-firstboot files/etc/uci-defaults/
@@ -98,39 +91,40 @@ jobs:
           [ -f "$f" ] && gzip -d "$f"
         done
         
-        # 转换为VMDK
+        # 查找解压后的镜像文件
         IMG_FILE=$(ls *-ext4-combined-efi.img 2>/dev/null | head -1)
+        
         if [ -n "$IMG_FILE" ] && [ -f "$IMG_FILE" ]; then
           echo "找到镜像: $IMG_FILE"
+          
+          # 1. 转换为 Flat VMDK (数据盘)
           qemu-img convert -f raw -O vmdk "$IMG_FILE" openwrt-esxi-flat.vmdk
           
-          # 创建VMDK描述符
+          # 2. 计算扇区数
           SIZE=$(stat -c%s openwrt-esxi-flat.vmdk)
           SECTORS=$((SIZE / 512))
           
-          cat > openwrt-esxi.vmdk <<'EOF'
-# Disk DescriptorFile
-version=1
-CID=fffffffe
-parentCID=ffffffff
-createType="monolithicFlat"
-
-# Extent description
-RW ${SECTORS} FLAT "openwrt-esxi-flat.vmdk" 0
-
-# The Disk Data Base
-#DDB
-
-ddb.adapterType = "lsilogic"
-ddb.geometry.cylinders = "522"
-ddb.geometry.heads = "255"
-ddb.geometry.sectors = "63"
-ddb.virtualHWVersion = "14"
-EOF
+          echo "创建 VMDK 描述文件..."
+          # 使用 printf 替代 cat <<EOF 以避免 YAML 缩进错误
+          printf '# Disk DescriptorFile\n' > openwrt-esxi.vmdk
+          printf 'version=1\n' >> openwrt-esxi.vmdk
+          printf 'CID=fffffffe\n' >> openwrt-esxi.vmdk
+          printf 'parentCID=ffffffff\n' >> openwrt-esxi.vmdk
+          printf 'createType="monolithicFlat"\n\n' >> openwrt-esxi.vmdk
+          printf '# Extent description\n' >> openwrt-esxi.vmdk
+          printf 'RW %s FLAT "openwrt-esxi-flat.vmdk" 0\n\n' "$SECTORS" >> openwrt-esxi.vmdk
+          printf '# The Disk Data Base\n#DDB\n\n' >> openwrt-esxi.vmdk
+          printf 'ddb.adapterType = "lsilogic"\n' >> openwrt-esxi.vmdk
+          printf 'ddb.geometry.cylinders = "522"\n' >> openwrt-esxi.vmdk
+          printf 'ddb.geometry.heads = "255"\n' >> openwrt-esxi.vmdk
+          printf 'ddb.geometry.sectors = "63"\n' >> openwrt-esxi.vmdk
+          printf 'ddb.virtualHWVersion = "14"\n' >> openwrt-esxi.vmdk
+          
           echo "VMDK 创建成功"
         else
           echo "未找到镜像文件"
           ls -la
+          exit 1
         fi
       
     - name: Upload VMDK Artifacts
