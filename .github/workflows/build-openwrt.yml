@@ -108,7 +108,7 @@ jobs:
           SIZE=$(stat -c%s openwrt-esxi-flat.vmdk)
           SECTORS=$((SIZE / 512))
           
-          cat > openwrt-esxi.vmdk <<EOF
+          cat > openwrt-esxi.vmdk <<'EOF'
 # Disk DescriptorFile
 version=1
 CID=fffffffe
