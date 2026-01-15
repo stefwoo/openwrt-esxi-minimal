@@ -1,0 +1,123 @@
+name: Build OpenWrt 24.10 for ESXi - Minimal
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'OpenWrt branch'
+        required: true
+        default: 'v24.10.4'
+      target:
+        description: 'Target platform'
+        required: true
+        default: 'x86-64'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      
+    - name: Setup Build Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential ccache ecj fastjar file g++ gawk \
+          gettext git java-propose-classpath libelf-dev libncurses5-dev \
+          libncursesw5-dev libssl-dev python python2.7-dev python3 unzip wget \
+          python3-distutils python3-setuptools python3-dev rsync subversion \
+          swig time xsltproc zlib1g-dev qemu-utils
+        
+    - name: Clone OpenWrt
+      run: |
+        git clone --depth 1 https://git.openwrt.org/openwrt/openwrt.git -b ${{ github.event.inputs.branch }} openwrt
+        cd openwrt
+        
+    - name: Add Custom Feeds
+      run: |
+        cd openwrt
+        # Add momo feed for luci-nikki
+        echo "src-git momo https://github.com/nikkinikki-org/OpenWrt-momo.git;main" >> feeds.conf.default
+        # Add standard feeds
+        echo "src-git packages https://github.com/openwrt/packages.git;openwrt-24.10" >> feeds.conf.default
+        echo "src-git luci https://github.com/openwrt/luci.git;openwrt-24.10" >> feeds.conf.default
+        
+    - name: Pre-install sing-box core
+      run: |
+        cd openwrt
+        mkdir -p files/usr/bin
+        # Download latest sing-box core (v1.12.0)
+        wget -qO- https://github.com/SagerNet/sing-box/releases/download/v1.12.0/sing-box-1.12.0-linux-amd64.tar.gz | \
+          tar -xz -C files/usr/bin/ sing-box
+        chmod +x files/usr/bin/sing-box
+        
+    - name: Copy Configuration Files
+      run: |
+        cd openwrt
+        # Copy config
+        cp $GITHUB_WORKSPACE/config.seed .config
+        # Copy network config
+        mkdir -p files/etc/uci-defaults
+        cp $GITHUB_WORKSPACE/99-custom-network files/etc/uci-defaults/
+        cp $GITHUB_WORKSPACE/99-firstboot files/etc/uci-defaults/
+        
+    - name: Update and Install Feeds
+      run: |
+        cd openwrt
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+        
+    - name: Configure Build
+      run: |
+        cd openwrt
+        make defconfig
+        
+    - name: Download Sources
+      run: |
+        cd openwrt
+        make download -j8 || make download -j1 V=s
+        
+    - name: Compile Firmware
+      run: |
+        cd openwrt
+        make -j$(nproc) || make -j1 V=s
+        
+    - name: Convert to VMDK
+      run: |
+        cd openwrt/bin/targets/x86/64/
+        gzip -d openwrt-*-ext4-combined-efi.img.gz
+        qemu-img convert -f raw -O vmdk openwrt-*-ext4-combined-efi.img openwrt-esxi-flat.vmdk
+        
+    - name: Create VMDK Descriptor
+      run: |
+        cd openwrt/bin/targets/x86/64/
+        SIZE=$(stat -c%s openwrt-esxi-flat.vmdk)
+        SECTORS=$((SIZE / 512))
+        cat > openwrt-esxi.vmdk <<EOF
+        # Disk DescriptorFile
+        version=1
+        CID=fffffffe
+        parentCID=ffffffff
+        createType="monolithicFlat"
+        
+        # Extent description
+        RW ${SECTORS} FLAT "openwrt-esxi-flat.vmdk" 0
+        
+        # The Disk Data Base 
+        #DDB
+        
+        ddb.adapterType = "lsilogic"
+        ddb.geometry.cylinders = "522"
+        ddb.geometry.heads = "255"
+        ddb.geometry.sectors = "63"
+        ddb.virtualHWVersion = "11"
+        EOF
+        
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: openwrt-esxi-vmdk
+        path: |
+          openwrt/bin/targets/x86/64/openwrt-esxi.vmdk
+          openwrt/bin/targets/x86/64/openwrt-esxi-flat.vmdk
