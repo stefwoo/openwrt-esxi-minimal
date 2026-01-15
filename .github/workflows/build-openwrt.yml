@@ -1,0 +1,159 @@
+name: Build OpenWrt 24.10 for ESXi - Minimal
+
+on:
+  workflow_dispatch:
+    inputs:
+      openwrt_version:
+        description: 'OpenWrt version tag'
+        required: true
+        default: 'v24.10.5'
+      singbox_version:
+        description: 'Sing-box version'
+        required: true
+        default: '1.12.16'
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Free Disk Space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        df -h
+      
+    - name: Setup Build Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential clang flex bison g++ gawk \
+          gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev \
+          python3-setuptools rsync swig unzip zlib1g-dev file wget \
+          python3-dev python3-pip qemu-utils libelf-dev
+      
+    - name: Clone OpenWrt
+      run: |
+        git clone --depth 1 --branch ${{ github.event.inputs.openwrt_version }} \
+          https://git.openwrt.org/openwrt/openwrt.git openwrt
+      
+    - name: Add Custom Feeds
+      run: |
+        cd openwrt
+        # 备份原始feeds配置
+        cp feeds.conf.default feeds.conf.default.bak
+        # 添加momo feed
+        echo "src-git momo https://github.com/nikkinikki-org/OpenWrt-momo.git" >> feeds.conf.default
+      
+    - name: Update and Install Feeds
+      run: |
+        cd openwrt
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+      
+    - name: Pre-install sing-box core
+      run: |
+        cd openwrt
+        mkdir -p files/usr/bin
+        SINGBOX_VER="${{ github.event.inputs.singbox_version }}"
+        
+        # 下载并解压sing-box
+        wget -q "https://github.com/SagerNet/sing-box/releases/download/v${SINGBOX_VER}/sing-box-${SINGBOX_VER}-linux-amd64.tar.gz" -O /tmp/sing-box.tar.gz
+        
+        # 解压到临时目录
+        tar -xzf /tmp/sing-box.tar.gz -C /tmp/
+        
+        # 复制二进制文件（sing-box解压后在子目录中）
+        cp "/tmp/sing-box-${SINGBOX_VER}-linux-amd64/sing-box" files/usr/bin/sing-box
+        chmod +x files/usr/bin/sing-box
+        
+        # 验证
+        ls -la files/usr/bin/sing-box
+        file files/usr/bin/sing-box
+        
+        # 清理
+        rm -rf /tmp/sing-box*
+      
+    - name: Copy Configuration Files
+      run: |
+        cd openwrt
+        # 复制config
+        cp $GITHUB_WORKSPACE/config.seed .config
+        # 复制网络配置脚本
+        mkdir -p files/etc/uci-defaults
+        cp $GITHUB_WORKSPACE/files/99-custom-network files/etc/uci-defaults/
+        cp $GITHUB_WORKSPACE/files/99-firstboot files/etc/uci-defaults/
+        chmod +x files/etc/uci-defaults/*
+      
+    - name: Configure Build
+      run: |
+        cd openwrt
+        make defconfig
+      
+    - name: Download Sources
+      run: |
+        cd openwrt
+        make download -j8 || make download -j1 V=s
+      
+    - name: Compile Firmware
+      run: |
+        cd openwrt
+        make -j$(nproc) || make -j1 V=s
+      
+    - name: Prepare VMDK Files
+      run: |
+        cd openwrt/bin/targets/x86/64/
+        
+        # 解压镜像
+        gzip -d openwrt-*-x86-64-generic-ext4-combined-efi.img.gz || true
+        
+        # 转换为VMDK
+        IMG_FILE=$(ls openwrt-*-x86-64-generic-ext4-combined-efi.img 2>/dev/null | head -1)
+        if [ -n "$IMG_FILE" ]; then
+          qemu-img convert -f raw -O vmdk "$IMG_FILE" openwrt-esxi-flat.vmdk
+          
+          # 创建VMDK描述符
+          SIZE=$(stat -c%s openwrt-esxi-flat.vmdk)
+          SECTORS=$((SIZE / 512))
+          
+          cat > openwrt-esxi.vmdk <<EOF
+        # Disk DescriptorFile
+        version=1
+        CID=fffffffe
+        parentCID=ffffffff
+        createType="monolithicFlat"
+
+        # Extent description
+        RW ${SECTORS} FLAT "openwrt-esxi-flat.vmdk" 0
+
+        # The Disk Data Base
+        #DDB
+
+        ddb.adapterType = "lsilogic"
+        ddb.geometry.cylinders = "522"
+        ddb.geometry.heads = "255"
+        ddb.geometry.sectors = "63"
+        ddb.virtualHWVersion = "14"
+        EOF
+        fi
+        
+        ls -la *.vmdk || echo "No VMDK files found"
+      
+    - name: Upload VMDK Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: openwrt-esxi-vmdk
+        path: |
+          openwrt/bin/targets/x86/64/*.vmdk
+        retention-days: 7
+        
+    - name: Upload All Firmware
+      uses: actions/upload-artifact@v4
+      with:
+        name: openwrt-firmware-all
+        path: |
+          openwrt/bin/targets/x86/64/*
+        retention-days: 7
