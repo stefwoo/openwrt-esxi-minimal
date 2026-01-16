@@ -6,7 +6,7 @@ on:
       openwrt_version:
         description: 'OpenWrt version tag'
         required: true
-        default: 'v24.10.0'
+        default: 'v24.10.5'
 
 jobs:
   build:
@@ -16,11 +16,40 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       
+    - name: Cache OpenWrt Downloads
+      uses: actions/cache@v4
+      with:
+        path: openwrt/dl
+        key: ${{ runner.os }}-openwrt-dl-${{ github.event.inputs.openwrt_version }}
+        restore-keys: |
+          ${{ runner.os }}-openwrt-dl-
+    
+    - name: Cache Feeds
+      uses: actions/cache@v4
+      with:
+        path: openwrt/feeds
+        key: ${{ runner.os }}-openwrt-feeds-${{ github.event.inputs.openwrt_version }}
+        restore-keys: |
+          ${{ runner.os }}-openwrt-feeds-
+    
+    - name: Cache Build
+      uses: actions/cache@v4
+      with:
+        path: |
+          openwrt/build_dir
+          openwrt/staging_dir
+        key: ${{ runner.os }}-openwrt-build-${{ github.event.inputs.openwrt_version }}-${{ hashFiles('**/config.seed') }}
+        restore-keys: |
+          ${{ runner.os }}-openwrt-build-${{ github.event.inputs.openwrt_version }}-
+          ${{ runner.os }}-openwrt-build-
+      
     - name: Free Disk Space
       run: |
         sudo rm -rf /usr/share/dotnet
         sudo rm -rf /usr/local/lib/android
         sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/share/boost
+        sudo apt-get clean
         df -h
       
     - name: Setup Build Environment
@@ -52,11 +81,12 @@ jobs:
           fi
         fi
       
-    - name: Update and Install Feeds
+    - name: Update Feeds
       run: |
         cd openwrt
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a
+        
+        # 只更新必要的feeds
+        ./scripts/feeds update packages luci
       
     - name: Copy Configuration Files
       run: |
@@ -71,21 +101,128 @@ jobs:
       run: |
         cd openwrt
         make defconfig
+        # 清理feeds添加的额外配置，只保留config.seed中指定的包
+        ./scripts/diffconfig.sh | grep '^CONFIG' > .config.new
+        cp $GITHUB_WORKSPACE/config.seed .config
+        cat .config.new >> .config 2>/dev/null || true
+        make defconfig
       
     - name: Download Sources
       run: |
         cd openwrt
-        make download -j8 || make download -j1 V=s
+        
+        make download -j8
       
     - name: Compile Firmware
       run: |
         cd openwrt
         make -j$(nproc) || make -j1 V=s
-        
-    - name: Upload All Firmware
+      env:
+        FORCE_UNSAFE_CONFIGURE: 1
+    
+    - name: Upload Raw Firmware Image
       uses: actions/upload-artifact@v4
       with:
-        name: openwrt-firmware-all
+        name: openwrt-firmware-raw
         path: |
-          openwrt/bin/targets/x86/64/*
-        retention-days: 7
+          openwrt/bin/targets/x86/64/*.img
+          openwrt/bin/targets/x86/64/*.img.gz
+        retention-days: 30
+    
+    - name: Show Cache Stats
+      run: |
+        if [ -d openwrt/dl ]; then
+          echo "=== Download Cache Stats ==="
+          du -sh openwrt/dl/
+          find openwrt/dl/ -type f | wc -l | xargs echo "Files:"
+        fi
+        if [ -d openwrt/feeds ]; then
+          echo "=== Feeds Cache Stats ==="
+          du -sh openwrt/feeds/
+        fi
+    
+    - name: Prepare VMDK Files
+      id: vmdk
+      run: |
+        cd openwrt/bin/targets/x86/64/
+        
+        echo "=== 当前目录内容 ==="
+        ls -lah
+        
+        # 查找并解压镜像
+        GZ_FILE=$(ls *.img.gz 2>/dev/null | head -1)
+        if [ -n "$GZ_FILE" ]; then
+          echo "发现压缩镜像: $GZ_FILE"
+          gzip -d "$GZ_FILE"
+          echo "解压完成"
+        fi
+        
+        echo "=== 解压后目录内容 ==="
+        ls -lah
+        
+        # 转换为VMDK
+        IMG_FILE=$(ls *.img 2>/dev/null | head -1)
+        if [ -z "$IMG_FILE" ]; then
+          echo "错误: 未找到 .img 文件"
+          exit 1
+        fi
+        
+        echo "找到镜像: $IMG_FILE"
+        echo "镜像大小: $(stat -c%s "$IMG_FILE") bytes"
+        
+        # 检查qemu-img是否可用
+        if ! command -v qemu-img &> /dev/null; then
+          echo "错误: qemu-img 未安装"
+          exit 1
+        fi
+        
+        echo "开始转换 VMDK..."
+        qemu-img convert -f raw -O vmdk -o subformat=monolithicFlat "$IMG_FILE" openwrt-esxi-flat.vmdk
+        
+        if [ ! -f openwrt-esxi-flat.vmdk ]; then
+          echo "错误: VMDK 转换失败"
+          exit 1
+        fi
+        
+        echo "VMDK 转换成功，大小: $(stat -c%s openwrt-esxi-flat.vmdk) bytes"
+        
+        # 创建VMDK描述符
+        SIZE=$(stat -c%s openwrt-esxi-flat.vmdk)
+        SECTORS=$((SIZE / 512))
+        
+        echo "创建 VMDK 描述符，扇区数: $SECTORS"
+        
+        cat > openwrt-esxi.vmdk <<EOF
+# Disk DescriptorFile
+version=1
+CID=fffffffe
+parentCID=ffffffff
+createType="monolithicFlat"
+
+# Extent description
+RW ${SECTORS} FLAT "openwrt-esxi-flat.vmdk" 0
+
+# The Disk Data Base
+#DDB
+
+ddb.adapterType = "lsilogic"
+ddb.geometry.cylinders = "522"
+ddb.geometry.heads = "255"
+ddb.geometry.sectors = "63"
+ddb.virtualHWVersion = "14"
+EOF
+        
+        echo "VMDK 描述符创建成功"
+        echo "=== 最终文件 ==="
+        ls -lah *.vmdk
+        
+        echo "vmdk_success=true" >> $GITHUB_OUTPUT
+    
+    - name: Upload VMDK Artifacts
+      if: steps.vmdk.outputs.vmdk_success == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: openwrt-esxi-vmdk
+        path: |
+          openwrt/bin/targets/x86/64/*.vmdk
+        retention-days: 30
