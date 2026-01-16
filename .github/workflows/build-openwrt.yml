@@ -85,8 +85,12 @@ jobs:
       run: |
         cd openwrt
         
+        # 添加singbox feed
+        echo "src-git singbox https://github.com/kenzok8/small-package.git" >> feeds.conf.default
+        
         # 只更新必要的feeds
-        ./scripts/feeds update packages luci
+        ./scripts/feeds update packages luci singbox
+        ./scripts/feeds install -a -p singbox
       
     - name: Copy Configuration Files
       run: |

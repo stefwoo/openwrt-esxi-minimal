@@ -130,8 +130,6 @@ CONFIG_PACKAGE_wpad=n
 CONFIG_PACKAGE_wpa-supplicant=n
 CONFIG_PACKAGE_kmod-usb-core=n
 CONFIG_PACKAGE_kmod-usb3=n
-CONFIG_PACKAGE_dnsmasq=n
-CONFIG_PACKAGE_dnsmasq-full=n
 CONFIG_PACKAGE_kmod-ipt-offload=n
 CONFIG_PACKAGE_kmod-ipt-raw=n
 CONFIG_PACKAGE_kmod-ipt-nat6=n
@@ -148,3 +146,38 @@ CONFIG_DEBUG=n
 CONFIG_STRIP_KERNEL_EXPORTS=y
 CONFIG_USE_MKLIBS=y
 CONFIG_USE_SSTRIP=y
+
+# ===================
+# Sing-Box Core
+# ===================
+CONFIG_PACKAGE_sing-box=y
+
+# ===================
+# Nftables Extra Modules (SingBox TProxy Required)
+# ===================
+CONFIG_PACKAGE_kmod-nft-mark=y
+
+# ===================
+# HTTPS Support
+# ===================
+CONFIG_PACKAGE_libustream-openssl=y
+
+# ===================
+# Disable IPv6 Completely
+# ===================
+CONFIG_KERNEL_IPV6=n
+CONFIG_PACKAGE_kmod-ipv6=n
+CONFIG_PACKAGE_kmod-nf-conntrack6=n
+
+# ===================
+# DNS Server (DHCP Disabled for Bypass Router)
+# ===================
+CONFIG_PACKAGE_dnsmasq=n
+CONFIG_PACKAGE_dnsmasq-full=y
+CONFIG_PACKAGE_dnsmasq_full_dhcp=n
+CONFIG_PACKAGE_dnsmasq_full_dhcpv6=n
+
+# ===================
+# LuCI Dependencies
+# ===================
+CONFIG_PACKAGE_luci-lib-ipkg=y
