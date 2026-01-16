@@ -106,6 +106,13 @@ jobs:
         cp $GITHUB_WORKSPACE/config.seed .config
         cat .config.new >> .config 2>/dev/null || true
         make defconfig
+        
+        # 只构建ext4-combined-efi镜像（精简输出）
+        echo "CONFIG_TARGET_ROOTFS_EXT4FS=y" >> .config
+        echo "CONFIG_TARGET_IMAGES_PAD=y" >> .config
+        echo "CONFIG_TARGET_ROOTFS_SQUASHFS=n" >> .config
+        echo "CONFIG_VMDK_IMAGES=n" >> .config
+        make defconfig
       
     - name: Download Sources
       run: |
@@ -149,21 +156,25 @@ jobs:
         echo "=== 当前目录内容 ==="
         ls -lah
         
-        # 查找并解压镜像
-        GZ_FILE=$(ls *.img.gz 2>/dev/null | head -1)
+        # 查找ext4-combined-efi镜像
+        GZ_FILE=$(ls *ext4-combined-efi.img.gz 2>/dev/null | head -1)
         if [ -n "$GZ_FILE" ]; then
           echo "发现压缩镜像: $GZ_FILE"
-          gzip -d "$GZ_FILE"
+          gunzip -k "$GZ_FILE"
           echo "解压完成"
+        else
+          echo "错误: 未找到 ext4-combined-efi.img.gz 文件"
+          ls -lah *.img.gz 2>/dev/null || echo "没有找到任何img.gz文件"
+          exit 1
         fi
         
         echo "=== 解压后目录内容 ==="
         ls -lah
         
         # 转换为VMDK
-        IMG_FILE=$(ls *.img 2>/dev/null | head -1)
+        IMG_FILE=$(ls *ext4-combined-efi.img 2>/dev/null | head -1)
         if [ -z "$IMG_FILE" ]; then
-          echo "错误: 未找到 .img 文件"
+          echo "错误: 未找到 ext4-combined-efi.img 文件"
           exit 1
         fi
         
