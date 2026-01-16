@@ -192,25 +192,7 @@ jobs:
         
         echo "创建 VMDK 描述符，扇区数: $SECTORS"
         
-        cat > openwrt-esxi.vmdk <<EOF
-# Disk DescriptorFile
-version=1
-CID=fffffffe
-parentCID=ffffffff
-createType="monolithicFlat"
-
-# Extent description
-RW ${SECTORS} FLAT "openwrt-esxi-flat.vmdk" 0
-
-# The Disk Data Base
-#DDB
-
-ddb.adapterType = "lsilogic"
-ddb.geometry.cylinders = "522"
-ddb.geometry.heads = "255"
-ddb.geometry.sectors = "63"
-ddb.virtualHWVersion = "14"
-EOF
+        printf "# Disk DescriptorFile\nversion=1\nCID=fffffffe\nparentCID=ffffffff\ncreateType=\"monolithicFlat\"\n\n# Extent description\nRW ${SECTORS} FLAT \"openwrt-esxi-flat.vmdk\" 0\n\n# The Disk Data Base\n#DDB\n\nddb.adapterType = \"lsilogic\"\nddb.geometry.cylinders = \"522\"\nddb.geometry.heads = \"255\"\nddb.geometry.sectors = \"63\"\nddb.virtualHWVersion = \"14\"\n" > openwrt-esxi.vmdk
         
         echo "VMDK 描述符创建成功"
         echo "=== 最终文件 ==="
