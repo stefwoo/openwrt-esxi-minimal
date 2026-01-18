@@ -82,10 +82,11 @@ jobs:
         cd openwrt
         make -j$(nproc) || make -j1 V=s
         
-    - name: Upload All Firmware
+    - name: Upload Firmware
       uses: actions/upload-artifact@v4
       with:
-        name: openwrt-firmware-all
+        name: openwrt-squashfs-combined-efi.vmdk
         path: |
-          openwrt/bin/targets/x86/64/*
+          openwrt/bin/targets/x86/64/*squashfs-combined-efi.vmdk
         retention-days: 7
+
