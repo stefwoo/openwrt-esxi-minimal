@@ -55,7 +55,8 @@ jobs:
     - name: Update and Install Feeds
       run: |
         cd openwrt
-        echo "src-git immortalwrt https://github.com/immortalwrt/immortalwrt.git;v24.10.0" >> feeds.conf.default
+        echo "src-git packages https://github.com/immortalwrt/packages.git;openwrt-24.10" >> feeds.conf.default
+        echo "src-git luci https://github.com/immortalwrt/luci.git;openwrt-24.10" >> feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
       
