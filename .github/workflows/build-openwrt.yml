@@ -56,8 +56,8 @@ jobs:
       run: |
         cd openwrt
         cat -n feeds.conf.default
-        echo "src-git immortal-packages https://github.com/immortalwrt/packages.git^0a088dc3aaf28b1fd3296d0286beb8c6c79c6928" >> feeds.conf.default
-        echo "src-git immortal-luci https://github.com/immortalwrt/luci.git^9bf025f4c50d028f4a095587c4d272975d3167b5" >> feeds.conf.default
+        echo "src-git immortalpackages https://github.com/immortalwrt/packages.git^0a088dc3aaf28b1fd3296d0286beb8c6c79c6928" >> feeds.conf.default
+        echo "src-git immortalluci https://github.com/immortalwrt/luci.git^9bf025f4c50d028f4a095587c4d272975d3167b5" >> feeds.conf.default
         cat -n feeds.conf.default
         ./scripts/feeds update -a
         ./scripts/feeds install -a
