@@ -4,6 +4,8 @@
 CONFIG_TARGET_x86=y
 CONFIG_TARGET_x86_64=y
 CONFIG_TARGET_x86_64_DEVICE_generic=y
+CONFIG_GRUB_IMAGES=y
+CONFIG_GRUB_EFI_IMAGES=y
 
 # ===================
 # Image Options
@@ -86,7 +88,7 @@ CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y
 # ===================
 # Nikki (Mihomo管理界面)
 # ===================
-#CONFIG_PACKAGE_luci-app-nikki=y
+# CONFIG_PACKAGE_luci-app-nikki=y
 
 # ===================
 # Network Tools
@@ -95,7 +97,7 @@ CONFIG_PACKAGE_curl=y
 CONFIG_PACKAGE_wget-ssl=y
 CONFIG_PACKAGE_ca-bundle=y
 CONFIG_PACKAGE_ca-certificates=y
-CONFIG_PACKAGE_yq=y
+# CONFIG_PACKAGE_yq=y
 
 # ===================
 # Essential Kernel Modules
@@ -111,8 +113,8 @@ CONFIG_PACKAGE_kmod-inet-diag=y
 # ===================
 # ESXi Network Drivers
 # ===================
-#CONFIG_PACKAGE_kmod-e1000=y
-#CONFIG_PACKAGE_kmod-e1000e=y
+# CONFIG_PACKAGE_kmod-e1000=y
+# CONFIG_PACKAGE_kmod-e1000e=y
 CONFIG_PACKAGE_kmod-vmxnet3=y
 
 # ===================
@@ -152,7 +154,7 @@ CONFIG_USE_SSTRIP=y
 # ===================
 # Mihomo Core
 # ===================
-#CONFIG_PACKAGE_mihomo=y
+# CONFIG_PACKAGE_mihomo=y
 
 # ===================
 # Nftables Extra Modules (SingBox TProxy Required)
@@ -175,24 +177,23 @@ CONFIG_PACKAGE_kmod-nf-conntrack6=n
 # DNS Server (DHCP Disabled for Bypass Router)
 # ===================
 CONFIG_PACKAGE_dnsmasq=n
-CONFIG_PACKAGE_dnsmasq-full=y
+CONFIG_PACKAGE_dnsmasq-full=n
 CONFIG_PACKAGE_dnsmasq_full_dhcp=n
 CONFIG_PACKAGE_dnsmasq_full_dhcpv6=n
+CONFIG_PACKAGE_dnsmasq-nossl=y
 
 # ===================
 # LuCI Dependencies
 # ===================
 CONFIG_PACKAGE_luci-lib-ipkg=y
 
-CONFIG_GRUB_IMAGES=y
-CONFIG_GRUB_EFI_IMAGES=y
 CONFIG_PACKAGE_ip-full=y
 
 # homeproxy相关
-CONFIG_PACKAGE_sing-box-tiny=y
-CONFIG_PACKAGE_ucode-mod-digest=y
-CONFIG_PACKAGE_luci-app-homeproxy=y
-CONFIG_PACKAGE_luci-i18n-homeproxy-zh-cn=y
+# CONFIG_PACKAGE_sing-box-tiny=y
+# CONFIG_PACKAGE_ucode-mod-digest=y
+# CONFIG_PACKAGE_luci-app-homeproxy=y
+# CONFIG_PACKAGE_luci-i18n-homeproxy-zh-cn=y
 
 
 
